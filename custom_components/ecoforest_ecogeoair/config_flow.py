@@ -13,7 +13,7 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, CONF_AL
 
 from .const import DOMAIN, MANUFACTURER
 from custom_components.ecoforest_ecogeoair.api.client import EcoGeoAirApi
-from config.custom_components.ecoforest_ecogeoair.api.exceptions import (
+from custom_components.ecoforest_ecogeoair.api.exceptions import (
     EcoGeoAirAuthError,
     EcoGeoAirConnectionError,
     EcoGeoAirError,
