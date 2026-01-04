@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "data": {
-          "host": "Ecoforest Easynet URL (e.g. http://192.168.1.200/)",
+          "host": "Ecoforest Easynet IP Address (ex: 192.168.1.200)",
           "username": "Username",
           "password": "Password",
           "alias": "Alias"
@@ -24,6 +24,84 @@
   },
   "entity": {
     "sensor": {
+      "alarm_active": {
+        "name": "Active alarm"
+      },
+      "outdoor_temperature": {
+        "name": "Outdoor temperature"
+      },
+      "heating_power": {
+        "name": "Heating power"
+      },
+      "cooling_power": {
+        "name": "Cooling power"
+      },
+      "total_consumption": {
+        "name": "Total power consumption"
+      },
+      "production_circuit_pressure": {
+        "name": "Production circuit pressure"
+      },
+      "production_circuit_input_temperature": {
+        "name": "Production circuit input temperature"
+      },
+      "production_circuit_output_temperature": {
+        "name": "Production circuit output temperature"
+      },
+      "ground_circuit_input_temperature": {
+        "name": "Ground circuit input temperature"
+      },
+      "ground_circuit_output_temperature": {
+        "name": "Ground circuit output temperature"
+      },
+      "ground_circuit_pressure": {
+        "name": "Ground/air circuit pressure"
+      },
+      "temperature_current_zone_1": {
+        "name": "Room temperature zone 1"
+      },
+      "temperature_current_zone_2": {
+        "name": "Room temperature zone 2"
+      },
+      "temperature_current_zone_3": {
+        "name": "Room temperature zone 3"
+      },
+      "temperature_current_zone_4": {
+        "name": "Room temperature zone 4"
+      },
+      "temperature_current_zone_5": {
+        "name": "Room temperature zone 5"
+      },
+      "temperature_setpoint_zone_1": {
+        "name": "Room temperature setpoint zone 1"
+      },
+      "temperature_setpoint_zone_2": {
+        "name": "Room temperature setpoint zone 2"
+      },
+      "temperature_setpoint_zone_3": {
+        "name": "Room temperature setpoint zone 3"
+      },
+      "temperature_setpoint_zone_4": {
+        "name": "Room temperature setpoint zone 4"
+      },
+      "temperature_setpoint_zone_5": {
+        "name": "Room temperature setpoint zone 5"
+      },
+      "humidity_zone_1": {
+        "name": "Humidity zone 1"
+      },
+      "humidity_zone_2": {
+        "name": "Humidity zone 2"
+      },
+      "humidity_zone_3": {
+        "name": "Humidity zone 3"
+      },
+      "humidity_zone_4": {
+        "name": "Humidity zone 4"
+      },
+      "humidity_zone_5": {
+        "name": "Humidity zone 5"
+      },
       "alarm": {
         "name": "Alarm",
         "state": {
@@ -73,9 +151,6 @@
           "225": "th-T 4 Error (thermostat for SG4) **",
           "226": "th-T 4 offline (thermostat for SG4) **"
         }
-      },
-      "t_outdoor": {
-        "name": "Outdoor temperature"
       },
       "t_dhw": {
         "name": "DHW temperature"
@@ -143,50 +218,8 @@
       "alarm_code": {
         "name": "Alarm code"
       },
-      "alarm_day": {
-        "name": "Alarm day"
-      },
-      "alarm_hour": {
-        "name": "Alarm hour"
-      },
-      "alarm_minute": {
-        "name": "Alarm minute"
-      },
-      "alarm_month": {
-        "name": "Alarm month"
-      },
       "alarm_status_0_alarms_present": {
         "name": "Alarm status (0 = alarms present)"
-      },
-      "alarm_year": {
-        "name": "Alarm year"
-      },
-      "annual_condensation_energy": {
-        "name": "Annual condensation energy"
-      },
-      "annual_electrical_energy": {
-        "name": "Annual electrical energy"
-      },
-      "annual_evaporation_energy": {
-        "name": "Annual evaporation energy"
-      },
-      "apr_coolem_cooling_production_april": {
-        "name": "Apr_CoolEM Cooling production April"
-      },
-      "apr_elecem_electric_consumption_april": {
-        "name": "Apr_ElecEM Electric consumption April"
-      },
-      "apr_heatem_heating_production_april": {
-        "name": "Apr_HeatEM Heating production April"
-      },
-      "aug_coolem_cooling_production_august": {
-        "name": "Aug_CoolEM Cooling production August"
-      },
-      "aug_elecem_electric_consumption_august": {
-        "name": "Aug_ElecEM Electric consumption August"
-      },
-      "aug_heatem_heating_production_august": {
-        "name": "Aug_HeatEM Heating production August"
       },
       "aux_brine_pump_simultaneous": {
         "name": "Aux. brine pump simultaneous"
@@ -302,42 +335,6 @@
       "condensation_capacity": {
         "name": "Condensation capacity"
       },
-      "condensation_energy_april": {
-        "name": "Condensation energy-April"
-      },
-      "condensation_energy_august": {
-        "name": "Condensation energy-August"
-      },
-      "condensation_energy_december": {
-        "name": "Condensation energy-December"
-      },
-      "condensation_energy_february": {
-        "name": "Condensation energy-February"
-      },
-      "condensation_energy_january": {
-        "name": "Condensation energy-January"
-      },
-      "condensation_energy_july": {
-        "name": "Condensation energy-July"
-      },
-      "condensation_energy_june": {
-        "name": "Condensation energy-June"
-      },
-      "condensation_energy_march": {
-        "name": "Condensation energy-March"
-      },
-      "condensation_energy_may": {
-        "name": "Condensation energy-May"
-      },
-      "condensation_energy_november": {
-        "name": "Condensation energy-November"
-      },
-      "condensation_energy_october": {
-        "name": "Condensation energy-October"
-      },
-      "condensation_energy_september": {
-        "name": "Condensation energy-September"
-      },
       "condensation_temperature": {
         "name": "Condensation temperature"
       },
@@ -355,39 +352,6 @@
       },
       "cooling_buffer_tank_temperature": {
         "name": "Cooling buffer-tank temperature"
-      },
-      "cop_instantaneous": {
-        "name": "COP (instantaneous)"
-      },
-      "current_day": {
-        "name": "Current day"
-      },
-      "current_hour": {
-        "name": "Current hour"
-      },
-      "current_minute": {
-        "name": "Current minute"
-      },
-      "current_month": {
-        "name": "Current month"
-      },
-      "current_year": {
-        "name": "Current year"
-      },
-      "day_of_week": {
-        "name": "Day of week"
-      },
-      "dec_arrq_por_hora_starts_h": {
-        "name": "DEC_Arrq_por_hora (starts/h)"
-      },
-      "dec_coolem_cooling_production_december": {
-        "name": "Dec_CoolEM Cooling production December"
-      },
-      "dec_elecem_electric_consumption_december": {
-        "name": "Dec_ElecEM Electric consumption December"
-      },
-      "dec_heatem_heating_production_december": {
-        "name": "Dec_HeatEM Heating production December"
       },
       "dg1_bus_demand_type": {
         "name": "DG1 BUS demand type"
@@ -434,42 +398,6 @@
       "elecconsumptpwr_instantaneous_electric_power": {
         "name": "ElecConsumptPwr Instantaneous electric power"
       },
-      "electrical_consumption_april": {
-        "name": "Electrical consumption-April"
-      },
-      "electrical_consumption_august": {
-        "name": "Electrical consumption-August"
-      },
-      "electrical_consumption_december": {
-        "name": "Electrical consumption-December"
-      },
-      "electrical_consumption_february": {
-        "name": "Electrical consumption-February"
-      },
-      "electrical_consumption_january": {
-        "name": "Electrical consumption-January"
-      },
-      "electrical_consumption_july": {
-        "name": "Electrical consumption-July"
-      },
-      "electrical_consumption_june": {
-        "name": "Electrical consumption-June"
-      },
-      "electrical_consumption_march": {
-        "name": "Electrical consumption-March"
-      },
-      "electrical_consumption_may": {
-        "name": "Electrical consumption-May"
-      },
-      "electrical_consumption_november": {
-        "name": "Electrical consumption-November"
-      },
-      "electrical_consumption_october": {
-        "name": "Electrical consumption-October"
-      },
-      "electrical_consumption_september": {
-        "name": "Electrical consumption-September"
-      },
       "em_units_energy_meter_units": {
         "name": "EM_Units Energy-meter units"
       },
@@ -478,42 +406,6 @@
       },
       "evaporation_capacity_instantaneous": {
         "name": "Evaporation capacity (instantaneous)"
-      },
-      "evaporation_energy_april": {
-        "name": "Evaporation energy-April"
-      },
-      "evaporation_energy_august": {
-        "name": "Evaporation energy-August"
-      },
-      "evaporation_energy_december": {
-        "name": "Evaporation energy-December"
-      },
-      "evaporation_energy_february": {
-        "name": "Evaporation energy-February"
-      },
-      "evaporation_energy_january": {
-        "name": "Evaporation energy-January"
-      },
-      "evaporation_energy_july": {
-        "name": "Evaporation energy-July"
-      },
-      "evaporation_energy_june": {
-        "name": "Evaporation energy-June"
-      },
-      "evaporation_energy_march": {
-        "name": "Evaporation energy-March"
-      },
-      "evaporation_energy_may": {
-        "name": "Evaporation energy-May"
-      },
-      "evaporation_energy_november": {
-        "name": "Evaporation energy-November"
-      },
-      "evaporation_energy_october": {
-        "name": "Evaporation energy-October"
-      },
-      "evaporation_energy_september": {
-        "name": "Evaporation energy-September"
       },
       "evaporation_pressure_refrigerant": {
         "name": "Evaporation pressure (refrigerant)"
@@ -532,15 +424,6 @@
       },
       "expansion_valve_position": {
         "name": "Expansion valve position %"
-      },
-      "feb_coolem_cooling_production_february": {
-        "name": "Feb_CoolEM Cooling production February"
-      },
-      "feb_elecem_electric_consumption_february": {
-        "name": "Feb_ElecEM Electric consumption February"
-      },
-      "feb_heatem_heating_production_february": {
-        "name": "Feb_HeatEM Heating production February"
       },
       "heat_buffer_electric_heater_state": {
         "name": "Heat-buffer electric-heater state"
@@ -569,50 +452,8 @@
       "high_heating_supply_temperature_alarm": {
         "name": "High heating supply-temperature alarm"
       },
-      "humidity_zone_1": {
-        "name": "Humidity zone 1"
-      },
-      "humidity_zone_2": {
-        "name": "Humidity zone 2"
-      },
-      "humidity_zone_3": {
-        "name": "Humidity zone 3"
-      },
-      "humidity_zone_4": {
-        "name": "Humidity zone 4"
-      },
-      "humidity_zone_5": {
-        "name": "Humidity zone 5"
-      },
       "inverter_temperature": {
         "name": "Inverter temperature"
-      },
-      "jan_coolem_cooling_production_january": {
-        "name": "Jan_CoolEM Cooling production January"
-      },
-      "jan_elecem_electric_consumption_january": {
-        "name": "Jan_ElecEM Electric consumption January"
-      },
-      "jan_heatem_heating_production_january": {
-        "name": "Jan_HeatEM Heating production January"
-      },
-      "jul_coolem_cooling_production_july": {
-        "name": "Jul_CoolEM Cooling production July"
-      },
-      "jul_elecem_electric_consumption_july": {
-        "name": "Jul_ElecEM Electric consumption July"
-      },
-      "jul_heatem_heating_production_july": {
-        "name": "Jul_HeatEM Heating production July"
-      },
-      "jun_coolem_cooling_production_june": {
-        "name": "Jun_CoolEM Cooling production June"
-      },
-      "jun_elecem_electric_consumption_june": {
-        "name": "Jun_ElecEM Electric consumption June"
-      },
-      "jun_heatem_heating_production_june": {
-        "name": "Jun_HeatEM Heating production June"
       },
       "log_brine_return_temperature": {
         "name": "Log: Brine return temperature"
@@ -668,176 +509,8 @@
       "low_suction_pressure_alarm": {
         "name": "Low suction-pressure alarm"
       },
-      "mar_coolem_cooling_production_march": {
-        "name": "Mar_CoolEM Cooling production March"
-      },
-      "mar_elecem_electric_consumption_march": {
-        "name": "Mar_ElecEM Electric consumption March"
-      },
-      "mar_heatem_heating_production_march": {
-        "name": "Mar_HeatEM Heating production March"
-      },
-      "may_coolem_cooling_production_may": {
-        "name": "May_CoolEM Cooling production May"
-      },
-      "may_elecem_electric_consumption_may": {
-        "name": "May_ElecEM Electric consumption May"
-      },
-      "may_heatem_heating_production_may": {
-        "name": "May_HeatEM Heating production May"
-      },
-      "mes_mostrado_selected_month": {
-        "name": "Mes_Mostrado (selected month)"
-      },
-      "minutes_until_compressor_start": {
-        "name": "Minutes until compressor start"
-      },
-      "monthly_condensation_energy_display": {
-        "name": "Monthly condensation energy (display)"
-      },
-      "monthly_electrical_energy_display": {
-        "name": "Monthly electrical energy (display)"
-      },
-      "monthly_evaporation_energy_display": {
-        "name": "Monthly evaporation energy (display)"
-      },
-      "n_log_alarm_index": {
-        "name": "N_Log (alarm index)"
-      },
-      "nov_coolem_cooling_production_november": {
-        "name": "Nov_CoolEM Cooling production November"
-      },
-      "nov_elecem_electric_consumption_november": {
-        "name": "Nov_ElecEM Electric consumption November"
-      },
-      "nov_heatem_heating_production_november": {
-        "name": "Nov_HeatEM Heating production November"
-      },
-      "oct_coolem_cooling_production_october": {
-        "name": "Oct_CoolEM Cooling production October"
-      },
-      "oct_elecem_electric_consumption_october": {
-        "name": "Oct_ElecEM Electric consumption October"
-      },
-      "oct_heatem_heating_production_october": {
-        "name": "Oct_HeatEM Heating production October"
-      },
-      "off_on_command_by_bus": {
-        "name": "Off/On command by BUS"
-      },
-      "on_off_control_by_bus": {
-        "name": "On/Off control by BUS"
-      },
-      "operation_programme_bus": {
-        "name": "Operation programme (BUS)"
-      },
-      "outdoor_temperature": {
-        "name": "Outdoor temperature"
-      },
-      "pac_compressor_suction_pressure": {
-        "name": "PAC Compressor suction pressure"
-      },
-      "passive_cooling_valve_do12": {
-        "name": "Passive-cooling valve (DO12)"
-      },
-      "pcc_heating_circuit_pressure": {
-        "name": "PCC Heating-circuit pressure"
-      },
-      "pcp_brine_pressure": {
-        "name": "PCP Brine pressure"
-      },
-      "pdc_compressor_discharge_pressure": {
-        "name": "PDC Compressor discharge pressure"
-      },
-      "pf_anual_annual_pf": {
-        "name": "PF_anual (annual PF)"
-      },
-      "pf_instantaneous": {
-        "name": "PF (instantaneous)"
-      },
-      "pf_mes_monthly_pf_10": {
-        "name": "PF_mes (monthly PF *10)"
-      },
-      "pool_bus_demand": {
-        "name": "Pool BUS demand"
-      },
-      "pool_demand_di4": {
-        "name": "Pool demand (DI4)"
-      },
-      "pool_production_active_do5": {
-        "name": "Pool production active (DO5)"
-      },
-      "power_consumption": {
-        "name": "Power consumption"
-      },
-      "production_circuit_pressure": {
-        "name": "Production circuit pressure"
-      },
-      "production_temperature_in": {
-        "name": "Production temperature In"
-      },
-      "production_temperature_out": {
-        "name": "Production temperature Out"
-      },
-      "ref_show_actual_reference": {
-        "name": "REF_show (actual reference)"
-      },
-      "reg_bc_climate_pump_regulation": {
-        "name": "Reg_BC Climate pump regulation %"
-      },
-      "reg_bp_brine_pump_regulation": {
-        "name": "Reg_BP Brine pump regulation %"
-      },
-      "reg_gi2_sg2_pump_regulation": {
-        "name": "Reg_GI2 SG2 pump regulation %"
-      },
-      "reg_gi3_sg3_pump_regulation": {
-        "name": "Reg_GI3 SG3 pump regulation %"
-      },
-      "reg_gi4_sg4_pump_regulation": {
-        "name": "Reg_GI4 SG4 pump regulation %"
-      },
-      "reg_gi5_boiler_pump_regulation": {
-        "name": "Reg_GI5 / Boiler pump regulation %"
-      },
-      "reg_vdc_climate_valve_regulation": {
-        "name": "Reg_Vdc Climate valve regulation %"
-      },
-      "reg_vdf_brine_valve_regulation": {
-        "name": "Reg_VdF Brine valve regulation %"
-      },
-      "reset_alarmas_coil": {
-        "name": "RESET_ALARMAS (coil)"
-      },
-      "reversing_valve_do11": {
-        "name": "Reversing valve (DO11)"
-      },
-      "room_temperature_zone_1": {
-        "name": "Room temperature zone 1"
-      },
-      "room_temperature_zone_2": {
-        "name": "Room temperature zone 2"
-      },
-      "room_temperature_zone_3": {
-        "name": "Room temperature zone 3"
-      },
-      "room_temperature_zone_4": {
-        "name": "Room temperature zone 4"
-      },
-      "room_temperature_zone_5": {
-        "name": "Room temperature zone 5"
-      },
       "scroll_temperature": {
         "name": "Scroll temperature"
-      },
-      "sep_coolem_cooling_production_september": {
-        "name": "Sep_CoolEM Cooling production September"
-      },
-      "sep_elecem_electric_consumption_september": {
-        "name": "Sep_ElecEM Electric consumption September"
-      },
-      "sep_heatem_heating_production_september": {
-        "name": "Sep_HeatEM Heating production September"
       },
       "set_acs_dhw_final_temperature_setpoint": {
         "name": "Set_ACS DHW final temperature setpoint"

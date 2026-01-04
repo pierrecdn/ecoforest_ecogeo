@@ -1,3 +1,5 @@
 .idea
 .DS_Store
+requirements.in
+requirements.txt
 __pycache__

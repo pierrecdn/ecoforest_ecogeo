@@ -1,18 +1,23 @@
 """Config flow for Ecoforest integration."""
 
 from __future__ import annotations
+from functools import partial
 
 import logging
 from typing import Any
 
-from pyecoforest.exceptions import EcoforestAuthenticationRequired
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, CONF_ALIAS
 
 from .const import DOMAIN, MANUFACTURER
-from .overrides.api import EcoGeoApi
+from custom_components.ecoforest_ecogeoair.api.client import EcoGeoAirApi
+from config.custom_components.ecoforest_ecogeoair.api.exceptions import (
+    EcoGeoAirAuthError,
+    EcoGeoAirConnectionError,
+    EcoGeoAirError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,20 +44,25 @@ class EcoForestEcoGeoConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                api = EcoGeoApi(
-                    user_input[CONF_HOST],
-                    user_input[CONF_USERNAME],
-                    user_input[CONF_PASSWORD],
+                api_kwargs = {
+                    "host": user_input[CONF_HOST],
+                    "user": user_input[CONF_USERNAME],
+                    "password": user_input[CONF_PASSWORD],
+                }
+                api = await self.hass.async_add_executor_job(
+                    partial(EcoGeoAirApi, **api_kwargs)
                 )
-                device = await api.get()
-            except EcoforestAuthenticationRequired:
+                await api.initialize()
+            except EcoGeoAirAuthError:
                 errors["base"] = "invalid_auth"
-            except Exception:
-                _LOGGER.exception("Unexpected exception")
+            except EcoGeoAirConnectionError:
                 errors["base"] = "cannot_connect"
+            except EcoGeoAirError as e:
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown_exception"
             else:
-                device_id = device.model_name
-                title = f"{MANUFACTURER} {device.model_name}"
+                device_id = api.device.model.name
+                title = f"{MANUFACTURER} {api.device.model.name}"
 
                 if CONF_ALIAS in user_input:
                     device_id = user_input[CONF_ALIAS]
@@ -61,10 +71,7 @@ class EcoForestEcoGeoConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(device_id)
                 self._abort_if_unique_id_configured()
 
-                return self.async_create_entry(
-                    title=title,
-                    data=user_input
-                )
+                return self.async_create_entry(title=title, data=user_input)
 
         return self.async_show_form(
             step_id="user",
