@@ -95,9 +95,11 @@ async def async_setup_entry(
                     f"{metric_name}_zone_{idx + 1}",
                     {
                         "entity_type": metric_type,
-                        "value_fn": lambda data: getattr(
-                            coordinator.data.status.temp_regulation.zones[idx],
-                            metric_name,
+                        "value_fn": lambda data,
+                        zone_idx=idx,
+                        metric=metric_name: getattr(
+                            coordinator.data.status.temp_regulation.zones[zone_idx],
+                            metric,
                         ),
                     },
                     device_alias,
