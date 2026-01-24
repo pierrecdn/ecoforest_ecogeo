@@ -59,28 +59,33 @@ class EcoGeoApiEntity(CoordinatorEntity[EcoGeoAirCoordinator]):
         """Initialize device information."""
         device_class = None
         native_unit_of_measurement = None
+        state_class = None
+
+        if definition["entity_type"] == "humidity":
+            device_class = SensorDeviceClass.HUMIDITY
+            native_unit_of_measurement = "%"
+            state_class = SensorStateClass.MEASUREMENT
+
         if definition["entity_type"] == "temperature":
             device_class = SensorDeviceClass.TEMPERATURE
             native_unit_of_measurement = UnitOfTemperature[
                 coordinator.data.temperature_unit.name
             ]
+            state_class = SensorStateClass.MEASUREMENT
         elif definition["entity_type"] == "pressure":
             device_class = SensorDeviceClass.PRESSURE
             native_unit_of_measurement = UnitOfPressure[
                 coordinator.data.pressure_unit.name
             ]
+            state_class = SensorStateClass.MEASUREMENT
         elif definition["entity_type"] == "power":
             device_class = SensorDeviceClass.POWER
             native_unit_of_measurement = UnitOfPower.WATT
+            state_class = SensorStateClass.MEASUREMENT
         # elif definition["entity_type"] == "measurement":
         #    device_class = SensorDeviceClass.MEASUREMENT
         elif definition["entity_type"] == "enum":
             device_class = SensorDeviceClass.ENUM
-
-        # Determine appropriate state class for measurements
-        state_class = None
-        if definition.get("entity_type") == "measurement":
-            state_class = SensorStateClass.MEASUREMENT
 
         self.entity_description = EcoGeoApiSensorEntityDescription(
             domain=domain,
