@@ -1,0 +1,183 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "host": "Ecoforest Easynet IP Address (ex: 192.168.1.200)",
+          "username": "Username",
+          "password": "Password",
+          "alias": "Alias"
+        },
+        "data_description": {
+          "alias": "Leave alias blank to use the heat pump model as a device ID"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "alarm_active": {
+        "name": "Active alarm"
+      },
+      "active_service": {
+        "name": "Active service",
+        "state": {
+          "idle": "Idle",
+          "heat": "Heating",
+          "dhw": "Domestic hot water",
+          "pool": "Pool",
+          "cooling": "Cooling"
+        }
+      },
+      "outdoor_temperature": {
+        "name": "Outdoor temperature"
+      },
+      "heating_power": {
+        "name": "Heating power"
+      },
+      "cooling_power": {
+        "name": "Cooling power"
+      },
+      "total_consumption": {
+        "name": "Total power consumption"
+      },
+      "cop": {
+        "name": "Coefficient of performance"
+      },
+      "dhw_tank_temperature": {
+        "name": "DHW tank temperature"
+      },
+      "dhw_tank_setpoint": {
+        "name": "DHW tank setpoint"
+      },
+      "production_circuit_pressure": {
+        "name": "Production circuit pressure"
+      },
+      "production_circuit_input_temperature": {
+        "name": "Production circuit input temperature"
+      },
+      "production_circuit_output_temperature": {
+        "name": "Production circuit output temperature"
+      },
+      "ground_circuit_input_temperature": {
+        "name": "Ground circuit input temperature"
+      },
+      "ground_circuit_output_temperature": {
+        "name": "Ground circuit output temperature"
+      },
+      "ground_circuit_pressure": {
+        "name": "Ground/air circuit pressure"
+      },
+      "temperature_current": {
+        "name": "Room {zone} temperature"
+      },
+      "temperature_setpoint": {
+        "name": "Room {zone} temperature setpoint"
+      },
+      "humidity": {
+        "name": "Room {zone} humidity"
+      }
+    },
+    "climate": {
+      "zone_climate": {
+        "name": "Room {zone}"
+      }
+    },
+    "select": {
+      "season_mode": {
+        "name": "Season program",
+        "state": {
+          "winter": "Winter",
+          "summer": "Summer",
+          "auto": "Auto",
+          "mixed": "Mixed",
+          "remote": "Remote"
+        }
+      }
+    },
+    "switch": {
+      "machine": {
+        "name": "Machine"
+      },
+      "dhw": {
+        "name": "Domestic hot water"
+      },
+      "pool": {
+        "name": "Pool"
+      },
+      "heating": {
+        "name": "Heating"
+      },
+      "cooling": {
+        "name": "Cooling"
+      }
+    },
+    "water_heater": {
+      "dhw": {
+        "name": "Domestic hot water",
+        "state_attributes": {
+          "activity": {
+            "name": "Activity",
+            "state": {
+              "idle": "Idle",
+              "heating": "Heating",
+              "htr": "HTR"
+            }
+          }
+        }
+      },
+      "pool": {
+        "name": "Pool",
+        "state_attributes": {
+          "activity": {
+            "name": "Activity",
+            "state": {
+              "idle": "Idle",
+              "heating": "Heating",
+              "htr": "HTR"
+            }
+          }
+        }
+      },
+      "heating": {
+        "name": "Heating",
+        "state_attributes": {
+          "activity": {
+            "name": "Activity",
+            "state": {
+              "idle": "Idle",
+              "heating": "Heating",
+              "htr": "HTR"
+            }
+          }
+        }
+      },
+      "cooling": {
+        "name": "Cooling",
+        "state_attributes": {
+          "activity": {
+            "name": "Activity",
+            "state": {
+              "idle": "Idle",
+              "cooling": "Cooling",
+              "htr": "HTR"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "dhw_htr_setpoint": {
+        "name": "DHW HTR setpoint"
+      }
+    }
+  }
+}

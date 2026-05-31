@@ -1,8 +1,31 @@
 {
   "entity": {
     "sensor": {
-      "alarm": {
+      "alarm_active": {
         "default": "mdi:alert"
+      }
+    },
+    "water_heater": {
+      "dhw": {
+        "default": "mdi:water-boiler",
+        "state": {
+          "off": "mdi:water-boiler-off"
+        }
+      },
+      "pool": {
+        "default": "mdi:pool-thermometer"
+      },
+      "heating": {
+        "default": "mdi:radiator",
+        "state": {
+          "off": "mdi:radiator-off"
+        }
+      },
+      "cooling": {
+        "default": "mdi:snowflake",
+        "state": {
+          "off": "mdi:snowflake-off"
+        }
       }
     }
   }
