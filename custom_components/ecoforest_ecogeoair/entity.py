@@ -1,114 +1,67 @@
 """Base Entity for Ecoforest."""
 
 from __future__ import annotations
-
+from enum import Enum
 from collections.abc import Callable
+
 from dataclasses import dataclass
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorStateClass,
-    SensorEntityDescription,
-)
-from homeassistant.const import (
-    UnitOfTemperature,
-    UnitOfPower,
-    UnitOfPressure,
-)
+from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.typing import StateType
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import EcoGeoAirCoordinator
-from .api.client import EcoGeoAirApi
+from .api.client import EcoGeoAirDevice
 
 
-@dataclass
-class EcoGeoAirDevice:
-    is_supported: bool
-    model_name: str
-    state: EcoGeoAirApi | None = None
+class EcoGeoAirApiDomain(Enum):
+    """Domains for EcoGeoAir API."""
 
-    @classmethod
-    def build(cls, model_name: str, data: EcoGeoAirApi) -> EcoGeoAirDevice:
-        return EcoGeoAirDevice(is_supported=True, model_name=model_name, state=data)
+    MAIN = "main"
+    ENERGY = "energy"
+    THERMODYNAMIC = "thermodynamic"
+    TEMP_REGULATION = "temp_regulation"
+    ZONES = "zones"
 
 
 @dataclass(frozen=True, kw_only=True)
-class EcoGeoApiSensorEntityDescription(SensorEntityDescription):
+class EcoGeoAirApiSensorEntityDescription(SensorEntityDescription):
     """Describes Ecogeoair sensor entity."""
 
-    domain: str
-    value_fn: Callable[[EcoGeoAirDevice], StateType] | None = None
+    domain: EcoGeoAirApiDomain
+    value_fn: Callable[[StateType], StateType] | None = None
 
 
-class EcoGeoApiEntity(CoordinatorEntity[EcoGeoAirCoordinator]):
+@dataclass(frozen=True, kw_only=True)
+class EcoGeoAirApiZoneSensorEntityDescription(EcoGeoAirApiSensorEntityDescription):
+    """Describes Ecogeoair zone-based sensor entity."""
+
+    zone_idx: int
+
+
+class EcoGeoAirApiEntity(CoordinatorEntity[EcoGeoAirCoordinator]):
     """Common Ecogeoair entity using CoordinatorEntity."""
 
     _attr_has_entity_name = True
+    entity_description: EcoGeoAirApiSensorEntityDescription
 
     def __init__(
         self,
         coordinator: EcoGeoAirCoordinator,
-        domain: str,
-        key: str,
-        definition: dict[str, str],
-        device_alias: str,
+        entity_description: EcoGeoAirApiSensorEntityDescription,
+        device_alias: str | None = None,
     ) -> None:
-        """Initialize device information."""
-        device_class = None
-        native_unit_of_measurement = None
-        state_class = None
+        """Initialize the entity."""
+        super().__init__(coordinator)
+        self.entity_description = entity_description
 
-        if definition["entity_type"] == "humidity":
-            device_class = SensorDeviceClass.HUMIDITY
-            native_unit_of_measurement = "%"
-            state_class = SensorStateClass.MEASUREMENT
-
-        if definition["entity_type"] == "temperature":
-            device_class = SensorDeviceClass.TEMPERATURE
-            native_unit_of_measurement = UnitOfTemperature[
-                coordinator.data.temperature_unit.name
-            ]
-            state_class = SensorStateClass.MEASUREMENT
-        elif definition["entity_type"] == "pressure":
-            device_class = SensorDeviceClass.PRESSURE
-            native_unit_of_measurement = UnitOfPressure[
-                coordinator.data.pressure_unit.name
-            ]
-            state_class = SensorStateClass.MEASUREMENT
-        elif definition["entity_type"] == "power":
-            device_class = SensorDeviceClass.POWER
-            native_unit_of_measurement = UnitOfPower.WATT
-            state_class = SensorStateClass.MEASUREMENT
-        # elif definition["entity_type"] == "measurement":
-        #    device_class = SensorDeviceClass.MEASUREMENT
-        elif definition["entity_type"] == "enum":
-            device_class = SensorDeviceClass.ENUM
-
-        self.entity_description = EcoGeoApiSensorEntityDescription(
-            domain=domain,
-            key=key,
-            translation_key=key,
-            value_fn=definition.get("value_fn")
-            if isinstance(definition, dict)
-            else None,
-            native_unit_of_measurement=native_unit_of_measurement,
-            device_class=device_class,
-            state_class=state_class,
-        )
         device_id = (
             coordinator.data.model.value if device_alias is None else device_alias
         )
         device_name = MANUFACTURER if device_alias is None else device_alias
-
-        id = f"{device_id}_{key}"
-        self._attr_unique_id = id
-        self.entity_id = f"sensor.{id}"
-
-        super().__init__(coordinator)
-
+        self._attr_unique_id = f"{device_id}_{entity_description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, device_id)},
             name=device_name,
@@ -117,7 +70,7 @@ class EcoGeoApiEntity(CoordinatorEntity[EcoGeoAirCoordinator]):
         )
 
     @property
-    def data(self) -> EcoGeoAirApi:
+    def data(self) -> EcoGeoAirDevice:
         """Return ecoforest data."""
         assert self.coordinator.data
         return self.coordinator.data
