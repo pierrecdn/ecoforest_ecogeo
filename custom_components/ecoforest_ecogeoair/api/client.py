@@ -1,5 +1,6 @@
 """Data models and enums for Ecoforest EcoGeoAir API client."""
 
+import asyncio
 import dataclasses
 from datetime import datetime
 from enum import Enum, IntEnum
@@ -77,9 +78,30 @@ class MachineStatus(IntEnum):
 
 
 class SeasonMode(IntEnum):
+    """Global season program (register 6101 / ic3, on_off.html estacion)."""
+
     WINTER = 0
     SUMMER = 1
-    MIXED = 2
+    AUTO = 2
+    MIXED = 3
+    REMOTE = 4
+
+
+SEASON_MODE_OPTIONS = ("winter", "summer", "auto", "mixed", "remote")
+USER_SEASON_MODE_OPTIONS = ("winter", "summer", "auto")
+
+
+def season_mode_to_option(mode: SeasonMode | int) -> str:
+    """Map a device season mode to a Home Assistant select option."""
+    value = int(mode)
+    if 0 <= value < len(SEASON_MODE_OPTIONS):
+        return SEASON_MODE_OPTIONS[value]
+    return "unknown"
+
+
+def option_to_season_mode(option: str) -> SeasonMode:
+    """Map a Home Assistant select option to a device season mode."""
+    return SeasonMode(SEASON_MODE_OPTIONS.index(option))
 
 
 class WorkingMode(IntEnum):
@@ -115,10 +137,28 @@ class ODUStatus(IntEnum):
     EMERGENCY = 2
 
 
+class ActiveService(Enum):
+    """Which service the compressor is currently running for."""
+
+    IDLE = "idle"
+    HEAT = "heat"
+    DHW = "dhw"
+    POOL = "pool"
+    COOLING = "cooling"
+
+
 class ZoneMode(IntEnum):
     OFF = 0
     HEAT = 1
     COOL = 2
+
+
+INVALID_SENSOR_READING = -999.9
+
+
+def is_valid_sensor_reading(value: float | None) -> bool:
+    """Return True when the API value is a real reading, not a disabled sentinel."""
+    return value is not None and value > INVALID_SENSOR_READING
 
 
 @dataclasses.dataclass
@@ -138,6 +178,15 @@ class ZoneAmbianceStatus:
     temperature_setpoint: float
     temperature_current: float
     humidity: float
+
+    @property
+    def is_configured(self) -> bool:
+        """Return True when the zone has room sensor or setpoint data."""
+        return (
+            self.temperature_setpoint > 0
+            or self.temperature_current > 0
+            or self.humidity > 0
+        )
 
 
 @dataclasses.dataclass
@@ -163,7 +212,12 @@ class TempRegulationStatus:
 
 @dataclasses.dataclass
 class ThermodynamicStatus:
-    """Data model for endpoint 2151."""
+    """Data model for endpoint 2151.
+
+    dhw_tank_setpoint (dt) is an internal circuit target. It can read higher than
+    the user setpoint and ATSL cap from endpoint 2103; the vendor UI shows dt too
+    so let's reflect that in the data model.
+    """
 
     heating_groups: list[GroupStatus]  # Groups 1-4 data
     heat_buffer_temperature: float
@@ -241,6 +295,19 @@ class MainStatus:
     cooling_tank: bool
     extra_dhw_active: bool
 
+    @property
+    def active_service(self) -> ActiveService:
+        """Determine which service the compressor is currently running for."""
+        if self.dhw_mode != DHWMode.OFF:
+            return ActiveService.DHW
+        if self.pool_mode != HeatingMode.OFF:
+            return ActiveService.POOL
+        if self.active_cooling_mode or self.passive_cooling_mode:
+            return ActiveService.COOLING
+        if self.heating_mode != HeatingMode.OFF:
+            return ActiveService.HEAT
+        return ActiveService.IDLE
+
 
 @dataclasses.dataclass
 class EnergyStatus:
@@ -292,14 +359,81 @@ class EnergyStatus:
 
 
 @dataclasses.dataclass
+class ServiceEnableStatus:
+    """User enable flags from service config endpoints.
+
+    The vendor user pages read these instead of the runtime mode fields on 2148
+    (hpfm/dpfm/ppfmode/cpfm). See acs_usuario.js (2104/AEU), calefaccion_usuario.js
+    (2108/ECU), piscina_usuario.js (2116/EPU), frio_usuario.js (2113/ERU).
+    """
+
+    dhw: bool
+    heating: bool
+    pool: bool
+    cooling: bool
+
+
+@dataclasses.dataclass
+class DhwUserConfig:
+    """DHW user page settings from endpoint 2103 (acs_usuario.js)."""
+
+    user_setpoint: float
+    max_setpoint: float
+    htr_setpoint: float
+
+
+@dataclasses.dataclass
+class SlowConfigStatus:
+    """Infrequently changing user configuration polled on the slow path."""
+
+    service_enable: ServiceEnableStatus
+    dhw: DhwUserConfig
+
+
+@dataclasses.dataclass
 class DeviceStatus:
     """Combined status from all endpoints."""
 
     main: MainStatus
     energy: EnergyStatus
+    slow_config: SlowConfigStatus
     thermodynamic: ThermodynamicStatus | None = None
     temp_regulation: TempRegulationStatus | None = None
     zones: ZonesStatus | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class InstalledFeatures:
+    """
+    Installed circuits from endpoint 2101
+    (HGFI/DGFI/PGFI/CGFI vendor logic in principal.js).
+    """
+
+    hgfi: int
+    dgfi: int
+    pgfi: int
+    cgfi: int
+    pcf: int
+
+    @property
+    def heating(self) -> bool:
+        """Heating circuit installed (matches vendor logic in principal.js)."""
+        return bool(self.hgfi & 1)
+
+    @property
+    def dhw(self) -> bool:
+        """DHW circuit installed (matches vendor principal.js dgfi&1)."""
+        return bool(self.dgfi & 1)
+
+    @property
+    def pool(self) -> bool:
+        """Pool circuit installed (matches vendor principal.js pgfi&1 && pcf&1|2)."""
+        return bool(self.pgfi & 1 and (self.pcf & 1 or self.pcf & 2))
+
+    @property
+    def cooling(self) -> bool:
+        """Cooling circuit installed (matches vendor principal.js cgfi&1|2|4|8)."""
+        return bool(self.cgfi & (1 | 2 | 4 | 8))
 
 
 @dataclasses.dataclass
@@ -309,7 +443,9 @@ class EcoGeoAirDevice:
     model: Model
     temperature_unit: TemperatureUnit
     pressure_unit: PressureUnit
+    alarms: str
     status: DeviceStatus
+    installed_features: InstalledFeatures
 
 
 class EcoGeoAirApi:
@@ -331,8 +467,14 @@ class EcoGeoAirApi:
         mapping_path = Path(__file__).parent / "api_mapping.json"
         with Path.open(mapping_path, encoding="utf-8") as f:
             self._api_mapping = json.load(f)
+        register_path = Path(__file__).parent / "register_map.json"
+        with Path.open(register_path, encoding="utf-8") as f:
+            self._register_map = json.load(f)
         self._client = session
         self._device: EcoGeoAirDevice | None = None
+        self._installed_features: InstalledFeatures | None = None
+        self._slow_config: SlowConfigStatus | None = None
+        self._call_lock = asyncio.Lock()
 
     @property
     def device(self) -> EcoGeoAirDevice:
@@ -340,6 +482,12 @@ class EcoGeoAirApi:
         if self._device is None:
             raise EcoGeoAirApiError("API not initialized, call initialize() first")
         return self._device
+
+    async def async_close(self) -> None:
+        """Close the HTTP client session."""
+        if self._client is not None and not self._client.closed:
+            await self._client.close()
+        self._client = None
 
     async def initialize(self) -> None:
         """Initialize the API client (async call not doable in __init__)."""
@@ -396,26 +544,222 @@ class EcoGeoAirApi:
             raise EcoGeoAirApiError(
                 "API client not initialized, call initialize() first"
             )
+        async with self._call_lock:
+            try:
+                response = await self._client.post(
+                    URL_CGI, auth=self._auth, timeout=self._timeout, data=data
+                )
+            except (
+                aiohttp.ConnectionTimeoutError,
+                aiohttp.ServerTimeoutError,
+                aiohttp.SocketTimeoutError,
+            ) as cto:
+                raise EcoGeoAirConnectionError from cto
+            except aiohttp.ClientError as ce:
+                raise EcoGeoAirConnectionError from ce
+
+            if response.status in [HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN]:
+                raise EcoGeoAirAuthError(status=response.status)
+
+            try:
+                body = await response.read()
+                text = body.decode("latin-1")
+            except aiohttp.ClientError as err:
+                raise EcoGeoAirConnectionError(
+                    "Failed to read API response"
+                ) from err
+
+            parsed_response = self._extract_payload(text)
+            _LOGGER.debug("Received from POST with data=%s: %s", data, parsed_response)
+
+            return parsed_response
+
+    def _get_write_register(self, name: str) -> dict[str, Any]:
+        """Return write register config by name from a read field that has dir/wtype in api_mapping."""
+        for fields in self._api_mapping.values():
+            for field in fields:
+                if field.get("name") == name and "dir" in field and "wtype" in field:
+                    return {
+                        "dir": field["dir"],
+                        "type": field["wtype"],
+                        "num": field["num"],
+                        "min": field["min"],
+                        "max": field["max"],
+                    }
+        raise EcoGeoAirApiError(f"Unknown write register: {name}")
+
+    async def write_register_map(
+        self, category: str, name: str, value: float | int
+    ) -> None:
+        """Write a value using register_map.json (vendor user-page registers)."""
+        try:
+            reg = self._register_map[category][name]
+        except KeyError as err:
+            raise EcoGeoAirApiError(
+                f"Unknown register map entry: {category}.{name}"
+            ) from err
+
+        dir_val = reg["dir"]
+        reg_type = reg["type"]
+        num = reg["num"]
+        min_val = reg["min"]
+        max_val = reg["max"]
+
+        if isinstance(value, float):
+            value = max(min_val, min(max_val, value))
+        else:
+            value = max(int(min_val), min(int(max_val), int(value)))
+
+        if reg_type not in [1, 2, 3]:
+            raise EcoGeoAirApiError(f"Unknown write register type: {reg_type}")
+
+        if reg_type == 1:
+            payload = f"idOperacion=2011&dir={dir_val}&num={num}&{value}"
+        else:
+            hex_val = (
+                self._encode_analog(float(value))
+                if reg_type == 2
+                else self._encode_integer(int(value))
+            )
+            payload = f"idOperacion=2012&dir={dir_val}&num={num}&{hex_val}"
+        await self._write_post(payload)
+
+    @staticmethod
+    def _encode_analog(value: float) -> str:
+        """Encode a float (value * 10 as 16-bit signed hex) for 2012."""
+        raw = int(round(value * 10))
+        if raw < 0:
+            raw = 65536 - abs(raw)
+        raw = raw & 0xFFFF
+        return f"{raw:04X}"
+
+    @staticmethod
+    def _encode_integer(value: int) -> str:
+        """Encode a signed 16-bit integer for 2012."""
+        value = int(value)
+        if value < 0:
+            value = 65536 - abs(value)
+        value = value & 0xFFFF
+        return f"{value:04X}"
+
+    async def _write_post(self, body: str) -> None:
+        """Send a write request (2011 or 2012) and check for errors."""
+        _LOGGER.debug("Sending POST to %s with data=%s", URL_CGI, body)
+        if self._client is None:
+            raise EcoGeoAirApiError(
+                "API client not initialized, call initialize() first"
+            )
         try:
             response = await self._client.post(
-                URL_CGI, auth=self._auth, timeout=self._timeout, data=data
+                URL_CGI, auth=self._auth, timeout=self._timeout, data=body
             )
         except (
             aiohttp.ConnectionTimeoutError,
             aiohttp.ServerTimeoutError,
             aiohttp.SocketTimeoutError,
-        ) as cto:
-            raise EcoGeoAirConnectionError from cto
-        except aiohttp.ClientError as ce:
+            aiohttp.ClientError,
+        ) as ce:
             raise EcoGeoAirConnectionError from ce
 
         if response.status in [HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN]:
             raise EcoGeoAirAuthError(status=response.status)
 
-        parsed_response = self._extract_payload(await response.text())
-        _LOGGER.debug("Received from POST with data=%s: %s", data, parsed_response)
+        self._extract_payload(await response.text())
 
-        return parsed_response
+    async def write_by_register(self, name: str, value: float | int) -> None:
+        """Write a value to a register by its read-field name in api_mapping.
+
+        The register must be a read field in api_mapping.json with dir, wtype,
+        num, min, max. Value is clamped to min/max and encoded by type:
+        type 1 = digital (2011), type 2 = analog/temperature (2012, value×10),
+        type 3 = integer (2012, signed 16-bit).
+        """
+        reg = self._get_write_register(name)
+        dir_val = reg["dir"]
+        reg_type = reg["type"]
+        num = reg["num"]
+        min_val = reg["min"]
+        max_val = reg["max"]
+
+        # Clamp value
+        if isinstance(value, float):
+            value = max(min_val, min(max_val, value))
+        else:
+            value = max(int(min_val), min(int(max_val), int(value)))
+
+        if reg_type not in [1, 2, 3]:
+            raise EcoGeoAirApiError(f"Unknown write register type: {reg_type}")
+
+        if reg_type == 1:
+            # Digital: idOperacion=2011&dir=X&num=Y&value (vendor sends value with no key)
+            payload = f"idOperacion=2011&dir={dir_val}&num={num}&{value}"
+        else:
+            # type 2: Analog (temperature etc.): value*10 as 16-bit signed hex
+            # type 3: Integer: value as 16-bit signed hex
+            hex_val = (
+                self._encode_analog(float(value))
+                if reg_type == 2
+                else self._encode_integer(int(value))
+            )
+            payload = f"idOperacion=2012&dir={dir_val}&num={num}&{hex_val}"
+        await self._write_post(payload)
+
+    async def set_machine_status(self, value: MachineStatus) -> None:
+        """Set machine on/off/emergency (main.machine_status). Write: 0=Off, 1=On, 2=Emergency."""
+        val_map = {
+            MachineStatus.OFF: 0,
+            MachineStatus.ON: 1,
+            MachineStatus.EMERGENCY: 2,
+        }
+        await self.write_by_register("ico1", val_map[value])
+
+    async def set_season_mode(self, value: SeasonMode) -> None:
+        """Set the global season program (main.season_mode / register 6101)."""
+        await self.write_by_register("ic3", int(value))
+
+    async def set_heating_mode(self, value: HeatingMode) -> None:
+        """Set heating on/off (main.heating_mode). Write: 0=Off, 1=On. DEFROST is sent as On."""
+        raw = 1 if value == HeatingMode.DEFROST else int(value)
+        await self.write_by_register("hpfm", raw)
+
+    async def set_dhw_mode(self, value: DHWMode) -> None:
+        """Set DHW on/off (main.dhw_mode). Write: 0=Off, 1=On. Non-OFF modes are sent as On."""
+        await self.write_by_register("dpfm", 0 if value == DHWMode.OFF else 1)
+
+    async def set_active_cooling_mode(self, value: bool) -> None:
+        """Set active cooling on/off (main.active_cooling_mode)."""
+        await self.write_by_register("cpfm", 1 if value else 0)
+
+    async def set_pool_mode(self, value: HeatingMode) -> None:
+        """Set pool on/off (main.pool_mode). Write: 0=Off, 1=On. DEFROST is sent as On."""
+        raw = 1 if value == HeatingMode.DEFROST else int(value)
+        await self.write_by_register("ppfmode", raw)
+
+    async def set_zone_heating_setpoint(self, zone_index: int, value: float) -> None:
+        """Set zone heating temperature setpoint (zones.zones[i].heating_setpoint). Zone 1–5."""
+        if not 1 <= zone_index <= 5:
+            raise EcoGeoAirApiError(f"Zone index must be 1–5, got {zone_index}")
+        await self.write_by_register(f"hdtsg{zone_index}", value)
+
+    async def set_dhw_setpoint(self, value: float) -> None:
+        """Set DHW user setpoint (2103 AS / register 6106)."""
+        await self.write_by_register("dt", value)
+
+    async def set_dhw_htr_setpoint(self, value: float) -> None:
+        """Set DHW HTR opportunistic setpoint (2103 ATSH / register 6104)."""
+        await self.write_register_map("dhw", "consigna_htr", value)
+
+    async def set_pool_setpoint(self, value: float) -> None:
+        """Set pool temperature setpoint (thermodynamic.pool_setpoint / zones.pool_setpoint)."""
+        await self.write_by_register("ppspf", value)
+
+    async def set_heating_cutoff_setpoint(self, value: float) -> None:
+        """Set heating cutoff temperature (calefaccion_usuario temp_corte / register 6159)."""
+        await self.write_register_map("heating", "temp_corte_calef", value)
+
+    async def set_active_cooling_cutoff_setpoint(self, value: float) -> None:
+        """Set active cooling cutoff temperature (frio_usuario corte_ref_act / register 6219)."""
+        await self.write_register_map("cooling", "temp_corte_refrig_act", value)
 
     def _parse_value(self, value: str, field_type: str, prefixed: bool = False) -> Any:
         """Parse a value according to its type and apply unit conversion if needed."""
@@ -601,6 +945,39 @@ class EcoGeoAirApi:
             pool_setpoint=data["ppspf"],
         )
 
+    async def get_alarms(self) -> str:
+        """Get current alarm message (endpoint 1079). Returns "N" when no alarm."""
+        values = await self._call(1079)
+        data = self._map_to_prefix(values)
+        return data.get("alarmas", "N")
+
+    @staticmethod
+    def _parse_hex_flag(value: str) -> int:
+        """Parse a signed 16-bit hex flag from endpoint 2101."""
+        result = int(value, 16)
+        return result if result <= 32768 else result - 65536
+
+    @staticmethod
+    def _parse_enable_flag(value: str) -> bool:
+        """Parse a 0/1 enable flag from user config endpoints."""
+        return bool(int(value, 16))
+
+    async def get_installed_features(self) -> InstalledFeatures:
+        """Get installed service circuits (endpoint 2101, cached after first read)."""
+        if self._installed_features is not None:
+            return self._installed_features
+
+        values = await self._call(2101)
+        data = self._map_to_prefix(values)
+        self._installed_features = InstalledFeatures(
+            hgfi=self._parse_hex_flag(data["HGFI"]),
+            dgfi=self._parse_hex_flag(data["DGFI"]),
+            pgfi=self._parse_hex_flag(data["PGFI"]),
+            cgfi=self._parse_hex_flag(data["CGFI"]),
+            pcf=self._parse_hex_flag(data["PCF"]),
+        )
+        return self._installed_features
+
     async def get_zones_status(self) -> ZonesStatus:
         """Get zones status (endpoint 2152)."""
         values = await self._call(2152)
@@ -632,32 +1009,103 @@ class EcoGeoAirApi:
             pool_setpoint=data["ppspf"],
         )
 
-    async def get_device_status(self) -> DeviceStatus:
+    @staticmethod
+    def _parse_prefixed_temperature(value: str) -> float:
+        """Parse a temperature from a name=value endpoint (value x 0.1 °C)."""
+        raw = int(value, 16)
+        if raw > 32768:
+            raw -= 65536
+        return raw / 10.0
+
+    def _parse_dhw_user_config(self, dhw_page: dict[str, str]) -> DhwUserConfig:
+        """Parse DHW user page fields from endpoint 2103."""
+        return DhwUserConfig(
+            user_setpoint=self._parse_prefixed_temperature(dhw_page["AS"]),
+            max_setpoint=self._parse_prefixed_temperature(dhw_page["ATSL"]),
+            htr_setpoint=self._parse_prefixed_temperature(dhw_page["ATSH"]),
+        )
+
+    async def _fetch_slow_config(self) -> SlowConfigStatus:
+        """Fetch user-facing config from slow-path endpoints."""
+        dhw_enable_v, heat_v, pool_v, cool_v, dhw_page_v = await asyncio.gather(
+            self._call(2104),
+            self._call(2108),
+            self._call(2116),
+            self._call(2113),
+            self._call(2103),
+        )
+        dhw_enable = self._map_to_prefix(dhw_enable_v)
+        heat = self._map_to_prefix(heat_v)
+        pool = self._map_to_prefix(pool_v)
+        cool = self._map_to_prefix(cool_v)
+        dhw_page = self._map_to_prefix(dhw_page_v)
+        return SlowConfigStatus(
+            service_enable=ServiceEnableStatus(
+                dhw=self._parse_enable_flag(dhw_enable["AEU"]),
+                heating=self._parse_enable_flag(heat["ECU"]),
+                pool=self._parse_enable_flag(pool["EPU"]),
+                cooling=self._parse_enable_flag(cool["ERU"]),
+            ),
+            dhw=self._parse_dhw_user_config(dhw_page),
+        )
+
+    async def refresh_slow_config(self) -> SlowConfigStatus:
+        """Refresh cached slow-path configuration."""
+        self._slow_config = await self._fetch_slow_config()
+        return self._slow_config
+
+    async def refresh_service_enable_status(self) -> ServiceEnableStatus:
+        """Refresh cached service enable flags."""
+        slow_config = await self.refresh_slow_config()
+        return slow_config.service_enable
+
+    async def get_device_status(
+        self, *, refresh_service_enable: bool = False
+    ) -> DeviceStatus:
         """Get complete device status from all endpoints."""
-        main = await self.get_main_status()
-        energy = await self.get_energy_status()
-        thermodynamic = await self.get_thermodynamic_status()
-        temp_regulation = await self.get_temp_regulation_status()
-        zones = await self.get_zones_status()
+        if refresh_service_enable or self._slow_config is None:
+            await self.refresh_slow_config()
+
+        slow_config = self._slow_config
+        assert slow_config is not None
+
+        (
+            main,
+            energy,
+            thermodynamic,
+            temp_regulation,
+            zones,
+        ) = await asyncio.gather(
+            self.get_main_status(),
+            self.get_energy_status(),
+            self.get_thermodynamic_status(),
+            self.get_temp_regulation_status(),
+            self.get_zones_status(),
+        )
         return DeviceStatus(
             main=main,
             energy=energy,
+            slow_config=slow_config,
             thermodynamic=thermodynamic,
             temp_regulation=temp_regulation,
             zones=zones,
         )
 
-    async def get_device(self) -> EcoGeoAirDevice:
+    async def get_device(self, *, refresh_service_enable: bool = False) -> EcoGeoAirDevice:
         """Get device unit preferences (endpoint 2006)."""
         values = await self._call(2006)
         # endpoint 2006 returns key=value lines (prefixed); parse by name
         data = self._parse_response("2006", values, prefixed=True)
-        # Fetch full device status
-        device_status = await self.get_device_status()
+        device_status = await self.get_device_status(
+            refresh_service_enable=refresh_service_enable
+        )
+        installed_features = await self.get_installed_features()
         self._device = EcoGeoAirDevice(
             model=device_status.main.model,
             temperature_unit=TemperatureUnit(data["utemp"]),
             pressure_unit=PressureUnit(data["upres"]),
+            alarms=await self.get_alarms(),
             status=device_status,
+            installed_features=installed_features,
         )
         return self._device
