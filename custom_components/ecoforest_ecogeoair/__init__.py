@@ -2,23 +2,34 @@ import logging
 from functools import partial
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN
+from .api.exceptions import (
+    EcoGeoAirApiError,
+    EcoGeoAirAuthError,
+    EcoGeoAirConnectionError,
+)
 from .coordinator import EcoGeoAirCoordinator
+from .const import DOMAIN
 from custom_components.ecoforest_ecogeoair.api.client import EcoGeoAirApi
-from .api.exceptions import EcoGeoAirAuthError, EcoGeoAirConnectionError
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [
+    Platform.CLIMATE,
+    Platform.NUMBER,
+    Platform.SELECT,
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.WATER_HEATER,
+]
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up EcoGeoAirApi from a config entry."""
+    api: EcoGeoAirApi | None = None
     try:
         api_kwargs = {
             "host": entry.data[CONF_HOST],
@@ -30,9 +41,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await api.initialize()
     except EcoGeoAirAuthError:
         _LOGGER.error("Failure during authentication on device")
+        if api is not None:
+            await api.async_close()
         return False
     except EcoGeoAirConnectionError as err:
         _LOGGER.error("Failure during connection to device")
+        if api is not None:
+            await api.async_close()
+        raise ConfigEntryNotReady from err
+    except EcoGeoAirApiError as err:
+        _LOGGER.error("Failure during device setup: %s", err)
+        if api is not None:
+            await api.async_close()
         raise ConfigEntryNotReady from err
 
     coordinator = EcoGeoAirCoordinator(hass, api)
@@ -48,7 +68,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    coordinator: EcoGeoAirCoordinator = hass.data[DOMAIN][entry.entry_id]
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
+        await coordinator.api.async_close()
 
     return unload_ok

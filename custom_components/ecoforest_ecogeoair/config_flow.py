@@ -43,6 +43,7 @@ class EcoForestEcoGeoConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            api: EcoGeoAirApi | None = None
             try:
                 api_kwargs = {
                     "host": user_input[CONF_HOST],
@@ -59,8 +60,11 @@ class EcoForestEcoGeoConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except EcoGeoAirError as e:
                 _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown_exception"
-            else:
+                errors["base"] = "unknown"
+            finally:
+                if api is not None and errors:
+                    await api.async_close()
+            if not errors:
                 device_id = api.device.model.name
                 title = f"{MANUFACTURER} {api.device.model.name}"
 
@@ -68,6 +72,7 @@ class EcoForestEcoGeoConfigFlow(ConfigFlow, domain=DOMAIN):
                     device_id = user_input[CONF_ALIAS]
                     title = f"{title} ({user_input[CONF_ALIAS]})"
 
+                await api.async_close()
                 await self.async_set_unique_id(device_id)
                 self._abort_if_unique_id_configured()
 
