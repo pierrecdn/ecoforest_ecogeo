@@ -5,6 +5,10 @@ This is forked from @bytestorm [ecoforest_ecogeo integration](https://github.com
 I didn't succeed to have that one working due to my HP24 Gateway software/API (check https://github.com/bytestorm/ecoforest_ecogeo/issues/16).
 Consequently this fork is reintroducing a new client and integration.
 
+## Development
+
+The captured Ecoforest web UI is ignored at `custom_components/ecoforest_ecogeoair/api/vendor_website/`. Regenerate it with basic auth using `scripts/regenerate_vendor_website.sh http://<heat-pump-ip>/webpages/gama/fr/webpages/Principal.html --user <username> --password <password>`.
+
 To install, add the GitHub Repo using the button below:
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=pierrecdn&repository=ecoforest_ecogeo&category=integration)
 
