@@ -1,9 +1,10 @@
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner-direct-single.svg)](https://stand-with-ukraine.pp.ua/)
 
-Ecoforest EcoGeo heat pump integration PoC (proof of concept, thus may lack features or stability)
+Ecoforest EcoGeo heat pump HomeAssistant integration PoC (proof of concept, thus may lack features or stability)
+
 This is forked from @bytestorm [ecoforest_ecogeo integration](https://github.com/bytestorm/ecoforest_ecogeo/).
 I didn't succeed to have that one working due to my HP24 Gateway software/API (check https://github.com/bytestorm/ecoforest_ecogeo/issues/16).
-Consequently this fork is reintroducing a new client and integration.
+Consequently this fork is reintroducing a new client and integration for devices running this version of the software.
 
 ## Development
 

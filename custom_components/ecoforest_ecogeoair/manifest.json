@@ -3,10 +3,10 @@
   "name": "Ecoforest EcoGeo/EcoAir",
   "codeowners": ["@pierrecdn"],
   "config_flow": true,
-  "documentation": "https://github.com/pierrecdn/ecoforest_ecogeoair",
+  "documentation": "https://github.com/pierrecdn/ecoforest_ecogeo",
   "iot_class": "local_polling",
   "loggers": [],
   "requirements": [],
   "version": "0.0.1",
-  "issue_tracker": "https://github.com/pierrecdn/ecoforest_ecogeoair/issues"
+  "issue_tracker": "https://github.com/pierrecdn/ecoforest_ecogeo/issues"
 }
