@@ -3,6 +3,7 @@
 requirements.in
 requirements.txt
 __pycache__
+.venv
 
 # Local vendor web UI capture used for API reverse engineering
 custom_components/ecoforest_ecogeoair/api/vendor_website/
