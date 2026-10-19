@@ -283,6 +283,14 @@ class EcoGeoAirZoneSensor(SensorEntity, EcoGeoAirApiEntity):
         self._metric_name = description.key
         # Append zone info to unique_id
         self._attr_unique_id = f"{self._attr_unique_id}_zone_{self._zone_idx + 1}"
+        if description.device_class == SensorDeviceClass.TEMPERATURE:
+            self._attr_native_unit_of_measurement = UnitOfTemperature[
+                coordinator.data.temperature_unit.name
+            ]
+        elif description.native_unit_of_measurement is not None:
+            self._attr_native_unit_of_measurement = (
+                description.native_unit_of_measurement
+            )
 
     @property
     def native_value(self) -> StateType:
