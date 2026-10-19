@@ -113,7 +113,6 @@ class EcoGeoAirClimate(CoordinatorEntity[EcoGeoAirCoordinator], ClimateEntity):
     """Room climate for one configured zone (setpoint + runtime action)."""
 
     _attr_has_entity_name = True
-    _attr_hvac_modes: list[HVACMode] = []
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
     _attr_translation_key = "zone_climate"
 
@@ -170,11 +169,14 @@ class EcoGeoAirClimate(CoordinatorEntity[EcoGeoAirCoordinator], ClimateEntity):
             cooling_installed=cooling_installed,
         )
         self._attr_hvac_action = hvac_action
-        self._attr_hvac_mode = display_hvac_mode(
+        hvac_mode = display_hvac_mode(
             hvac_action,
             season_mode,
             cooling_installed=cooling_installed,
         )
+        self._attr_hvac_mode = hvac_mode
+        # Single read-only mode for UI labeling (no async_set_hvac_mode).
+        self._attr_hvac_modes = [hvac_mode]
 
         tr = status.temp_regulation
         if tr is None or self._zone_idx >= len(tr.zones):
