@@ -154,11 +154,21 @@ class ZoneMode(IntEnum):
 
 
 INVALID_SENSOR_READING = -999.9
+# Unconfigured buffer fields often read 0.0 / 0.1 instead of the -999.9 sentinel.
+MIN_PLAUSIBLE_BUFFER_TEMPERATURE_C = 5.0
 
 
 def is_valid_sensor_reading(value: float | None) -> bool:
     """Return True when the API value is a real reading, not a disabled sentinel."""
     return value is not None and value > INVALID_SENSOR_READING
+
+
+def is_plausible_buffer_temperature(value: float | None) -> bool:
+    """Return True when a buffer/inertia tank temperature looks like a real reading."""
+    return (
+        is_valid_sensor_reading(value)
+        and value >= MIN_PLAUSIBLE_BUFFER_TEMPERATURE_C
+    )
 
 
 @dataclasses.dataclass

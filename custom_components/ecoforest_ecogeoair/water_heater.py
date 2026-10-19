@@ -29,6 +29,7 @@ from .api.client import (
     HeatingMode,
     HTRMode,
     TemperatureUnit,
+    is_plausible_buffer_temperature,
     is_valid_sensor_reading,
 )
 from .const import DOMAIN, MANUFACTURER
@@ -114,35 +115,47 @@ def _service_icon(status: DeviceStatus, service: ServiceKind) -> str:
     return on_icon
 
 
-def _buffer_temperatures(
+def _circuit_temperatures(
     status: DeviceStatus, service: ServiceKind
 ) -> tuple[float | None, float | None]:
-    """Return buffer current temperature and setpoint when available."""
+    """Return live and target temperatures for heating/cooling circuit entities.
+
+    Target is the service cutoff (TCC / TCFA on endpoint 2150), matching what
+    async_set_temperature writes. Current uses the inertia buffer when installed
+    and plausible (2151); otherwise production circuit output from 2148.
+    """
+    main = status.main
+    regulation = status.temp_regulation
+    thermo = status.thermodynamic
+    current: float | None = None
+    target: float | None = None
+
     if service == "heating":
-        if status.zones is not None:
-            return (
-                status.zones.heating_buffer,
-                status.zones.heating_buffer_setpoint,
-            )
-        if status.thermodynamic is not None:
-            thermo = status.thermodynamic
-            return (
-                thermo.heat_buffer_temperature,
-                thermo.heat_buffer_setpoint,
-            )
+        if regulation is not None and is_valid_sensor_reading(
+            regulation.heat_temperature
+        ):
+            target = regulation.heat_temperature
+        if main.heating_tank and thermo is not None:
+            if is_plausible_buffer_temperature(thermo.heat_buffer_temperature):
+                current = thermo.heat_buffer_temperature
+        if current is None and is_valid_sensor_reading(
+            main.production_circuit_output_temperature
+        ):
+            current = main.production_circuit_output_temperature
     elif service == "cooling":
-        if status.zones is not None:
-            return (
-                status.zones.cooling_buffer,
-                status.zones.cooling_buffer_setpoint,
-            )
-        if status.thermodynamic is not None:
-            thermo = status.thermodynamic
-            return (
-                thermo.cool_buffer_temperature,
-                thermo.cool_buffer_setpoint,
-            )
-    return None, None
+        if regulation is not None and is_valid_sensor_reading(
+            regulation.active_cool_temperature
+        ):
+            target = regulation.active_cool_temperature
+        if main.cooling_tank and thermo is not None:
+            if is_plausible_buffer_temperature(thermo.cool_buffer_temperature):
+                current = thermo.cool_buffer_temperature
+        if current is None and is_valid_sensor_reading(
+            main.production_circuit_output_temperature
+        ):
+            current = main.production_circuit_output_temperature
+
+    return current, target
 
 
 async def async_setup_entry(
@@ -413,7 +426,7 @@ class _HeatPumpCircuitEntity(_EcoGeoAirWaterHeater):
     def _update_attrs(self) -> None:
         """Update entity attributes from coordinator data."""
         status = self.coordinator.data.status
-        current, target = _buffer_temperatures(status, self._service)
+        current, target = _circuit_temperatures(status, self._service)
 
         self._attr_current_operation = _configured_operation(status, self._service)
         self._attr_icon = _service_icon(status, self._service)
