@@ -120,9 +120,9 @@ def _circuit_temperatures(
 ) -> tuple[float | None, float | None]:
     """Return live and target temperatures for heating/cooling circuit entities.
 
-    Target is the service cutoff (TCC / TCFA on endpoint 2150), matching what
-    async_set_temperature writes. Current uses the inertia buffer when installed
-    and plausible (2151); otherwise production circuit output from 2148.
+    With an inertia tank, target is the buffer setpoint (2151 hbtsp/cbtsp). Without
+    a tank, target is the service cutoff (2150 TCC/TCFA). Current uses the buffer
+    temperature when installed and plausible; otherwise production output (2148).
     """
     main = status.main
     regulation = status.temp_regulation
@@ -131,25 +131,29 @@ def _circuit_temperatures(
     target: float | None = None
 
     if service == "heating":
-        if regulation is not None and is_valid_sensor_reading(
+        if main.heating_tank and thermo is not None:
+            if is_plausible_buffer_temperature(thermo.heat_buffer_setpoint):
+                target = thermo.heat_buffer_setpoint
+            if is_plausible_buffer_temperature(thermo.heat_buffer_temperature):
+                current = thermo.heat_buffer_temperature
+        if target is None and regulation is not None and is_valid_sensor_reading(
             regulation.heat_temperature
         ):
             target = regulation.heat_temperature
-        if main.heating_tank and thermo is not None:
-            if is_plausible_buffer_temperature(thermo.heat_buffer_temperature):
-                current = thermo.heat_buffer_temperature
         if current is None and is_valid_sensor_reading(
             main.production_circuit_output_temperature
         ):
             current = main.production_circuit_output_temperature
     elif service == "cooling":
-        if regulation is not None and is_valid_sensor_reading(
+        if main.cooling_tank and thermo is not None:
+            if is_plausible_buffer_temperature(thermo.cool_buffer_setpoint):
+                target = thermo.cool_buffer_setpoint
+            if is_plausible_buffer_temperature(thermo.cool_buffer_temperature):
+                current = thermo.cool_buffer_temperature
+        if target is None and regulation is not None and is_valid_sensor_reading(
             regulation.active_cool_temperature
         ):
             target = regulation.active_cool_temperature
-        if main.cooling_tank and thermo is not None:
-            if is_plausible_buffer_temperature(thermo.cool_buffer_temperature):
-                current = thermo.cool_buffer_temperature
         if current is None and is_valid_sensor_reading(
             main.production_circuit_output_temperature
         ):
@@ -430,9 +434,24 @@ class _HeatPumpCircuitEntity(_EcoGeoAirWaterHeater):
 
         self._attr_current_operation = _configured_operation(status, self._service)
         self._attr_icon = _service_icon(status, self._service)
-        self._attr_extra_state_attributes = {
+        extras: dict[str, Any] = {
             "activity": _service_activity(status, self._service),
         }
+        regulation = status.temp_regulation
+        if self._service == "heating" and regulation is not None:
+            cutoff = regulation.heat_temperature
+            if is_valid_sensor_reading(cutoff):
+                extras["heating_cutoff_temperature"] = _to_entity_temperature(
+                    self.coordinator, cutoff
+                )
+        elif self._service == "cooling" and regulation is not None:
+            cutoff = regulation.active_cool_temperature
+            if is_valid_sensor_reading(cutoff):
+                extras["active_cooling_cutoff_temperature"] = _to_entity_temperature(
+                    self.coordinator, cutoff
+                )
+
+        self._attr_extra_state_attributes = extras
         self._attr_current_temperature = (
             current if is_valid_sensor_reading(current) else None
         )
@@ -471,8 +490,26 @@ class HeatPumpHeatingEntity(_HeatPumpCircuitEntity):
             translation_key="heating",
         )
 
+    @callback
+    def _update_attrs(self) -> None:
+        """Update heating entity; buffer setpoint is read-only when inertia tank."""
+        super()._update_attrs()
+        if self.coordinator.data.status.main.heating_tank:
+            self._attr_supported_features = (
+                WaterHeaterEntityFeature.ON_OFF
+                | WaterHeaterEntityFeature.OPERATION_MODE
+            )
+        else:
+            self._attr_supported_features = (
+                WaterHeaterEntityFeature.ON_OFF
+                | WaterHeaterEntityFeature.TARGET_TEMPERATURE
+                | WaterHeaterEntityFeature.OPERATION_MODE
+            )
+
     async def async_set_temperature(self, **kwargs: Any) -> None:
-        """Set the heating cutoff temperature."""
+        """Set the heating cutoff temperature (no tank) or skip when tank is read-only."""
+        if self.coordinator.data.status.main.heating_tank:
+            return
         if (temp := kwargs.get(ATTR_TEMPERATURE)) is not None:
             await self.coordinator.api.set_heating_cutoff_setpoint(temp)
             await self.coordinator.async_request_refresh()
