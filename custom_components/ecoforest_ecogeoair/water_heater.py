@@ -473,6 +473,7 @@ class HeatPumpHeatingEntity(_HeatPumpCircuitEntity):
     """Representation of the space heating hydraulic circuit."""
 
     _attr_has_entity_name = True
+    _attr_precision = PRECISION_WHOLE
     _service: ServiceKind = "heating"
 
     def __init__(
@@ -492,19 +493,22 @@ class HeatPumpHeatingEntity(_HeatPumpCircuitEntity):
 
     @callback
     def _update_attrs(self) -> None:
-        """Update heating entity; buffer setpoint is read-only when inertia tank."""
+        """Apply heating-specific UI: regulated buffer vs user cutoff."""
         super()._update_attrs()
-        if self.coordinator.data.status.main.heating_tank:
-            self._attr_supported_features = (
-                WaterHeaterEntityFeature.ON_OFF
-                | WaterHeaterEntityFeature.OPERATION_MODE
-            )
+        status = self.coordinator.data.status
+        if status.main.heating_tank:
+            # Twin-thermometer layout needs TARGET_TEMPERATURE; min=max locks the slider
+            # because buffer setpoint is regulated on the unit (unlike DHW user setpoint).
+            target = self._attr_target_temperature
+            if target is not None:
+                self._attr_min_temp = target
+                self._attr_max_temp = target
+            else:
+                self._attr_min_temp = None
+                self._attr_max_temp = None
         else:
-            self._attr_supported_features = (
-                WaterHeaterEntityFeature.ON_OFF
-                | WaterHeaterEntityFeature.TARGET_TEMPERATURE
-                | WaterHeaterEntityFeature.OPERATION_MODE
-            )
+            self._attr_min_temp = None
+            self._attr_max_temp = None
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set the heating cutoff temperature (no tank) or skip when tank is read-only."""
